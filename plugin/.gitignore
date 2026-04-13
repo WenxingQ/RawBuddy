@@ -1,0 +1,7 @@
+node_modules/
+dist/
+
+# webpack build output at plugin root
+/index.html
+/main.js
+/main.js.LICENSE.txt
