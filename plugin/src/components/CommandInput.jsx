@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { sendEditCommand } from '../services/claude';
-import { getDocumentContext, applyEdits } from '../services/photoshop';
+import { getDocumentContext, applyEdits, captureDocumentImage } from '../services/photoshop';
 
 /**
  * Build a short list of tag strings from Claude's edit response,
@@ -43,7 +43,8 @@ export default function CommandInput({ onEditApplied, hasApiKey, onGoToSettings 
 
     try {
       const docContext = getDocumentContext();
-      const edits = await sendEditCommand(trimmed, docContext);
+      const imageBase64 = await captureDocumentImage(); // null if unavailable — never throws
+      const edits = await sendEditCommand(trimmed, docContext, imageBase64);
       await applyEdits(edits);
 
       setLastExplanation(edits.explanation);
@@ -150,7 +151,7 @@ export default function CommandInput({ onEditApplied, hasApiKey, onGoToSettings 
       )}
 
       <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right' }}>
-        {navigator.platform?.startsWith('Mac') ? '⌘' : 'Ctrl'}+Enter to apply
+        {(() => { try { return require('uxp').host.os === 'macOS'; } catch { return false; } })() ? '⌘' : 'Ctrl'}+Enter to apply
       </div>
     </div>
   );

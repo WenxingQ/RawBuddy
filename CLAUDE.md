@@ -60,15 +60,16 @@ plugin/
 ### Data flow
 
 1. User types a command in `CommandInput`
-2. `claude.js` POSTs to `https://api.anthropic.com/v1/messages` with `tool_choice: any`
-3. Claude calls `apply_photo_edits` tool → returns `{ explanation, camera_raw?, photoshop? }`
-4. `photoshop.js` applies the edits via native PS adjustment layers:
+2. `photoshop.js:captureDocumentImage()` captures a downsampled JPEG of the active document (long edge ≤ 1024px, quality 0.7) using `ps.imaging.getPixels()` + `encodeImageData()`. Returns `null` gracefully if the imaging API is unavailable (PS < 27.2) — the rest of the flow proceeds text-only.
+3. `claude.js` POSTs to `https://api.anthropic.com/v1/messages` with `tool_choice: { type: 'tool', name: 'apply_photo_edits' }`. When an image is available the user message content is an array `[{ type: 'image', ... }, { type: 'text', ... }]`; otherwise it is a plain string.
+4. Claude visually analyses the image (tones, color casts, subject, mood) and uses that as baseline context, then calls `apply_photo_edits` → returns `{ explanation, camera_raw?, photoshop? }`
+5. `photoshop.js` applies the edits via native PS adjustment layers:
    - `camera_raw.exposure/contrast` → Brightness/Contrast layer (exposure scaled: 1 stop ≈ 40 brightness units)
    - `camera_raw.highlights/shadows/whites/blacks` → Curves layer
    - `camera_raw.vibrance` → Vibrance layer
    - `camera_raw.saturation` + `photoshop.hue/saturation_ps/lightness` → Hue/Saturation layer
    - `photoshop.brightness/contrast_ps` → Brightness/Contrast layer
-5. History entry added to React state (session only)
+6. History entry added to React state (session only)
 
 ### Hard-won UXP lessons — do not revert these
 
@@ -99,6 +100,15 @@ plugin/
   }
   ```
   Flat properties on the type object are ignored. CharID keys (`Strt`, `H   `, `Lght`) cause a -1715 program error.
+
+### Image capture (`captureDocumentImage`)
+
+- **`ps.imaging` is only available in PS 27.2+.** Always guard with `typeof imaging.getPixels !== 'function'` before calling. The function returns `null` on older builds and the flow degrades to text-only automatically.
+- **`getPixels` must run inside `withModal`** — it composites all visible layers, which PS treats as a document-state operation requiring modal context.
+- **Always pass `componentSize: 8` explicitly** to `getPixels`. The default is undocumented and could change in a future PS release, silently breaking JPEG encoding.
+- **`encodeImageData` with `mediaType: 'image/jpeg'`** accepts a `quality` float (0–1). We use `0.7` — sufficient for visual analysis, keeps payload to ~80–150KB base64.
+- **Do not call `imageData.dispose()`** after passing it to `encodeImageData`. The UXP imaging runtime manages the lifecycle automatically; explicit disposal can cause access-after-free errors.
+- **Base64 conversion must be chunked** (8192 bytes per iteration). Calling `String.fromCharCode(...buffer)` on a large Uint8Array in a single spread will exhaust the JS call stack.
 
 ### Adding new adjustment parameters
 

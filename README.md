@@ -4,14 +4,16 @@ A Photoshop UXP panel plugin that lets you edit photos using plain English. Type
 
 ## What it does
 
-RawBuddy sends your instruction to Claude (Anthropic's AI) which figures out the right combination of tonal and colour adjustments and returns specific numeric values. Those values are applied directly to your document as native Photoshop adjustment layers:
+RawBuddy sends your instruction to Claude (Anthropic's AI) along with a downsampled preview of your image. Claude visually analyses the photo — assessing exposure, tones, color casts, and mood — then uses that as baseline context when deciding what values to apply. The result is adjustments calibrated to what your image actually looks like, not a generic preset.
+
+Those values are applied directly to your document as native Photoshop adjustment layers:
 
 - **Brightness/Contrast** — exposure and contrast adjustments
 - **Curves** — highlight recovery, shadow lifting, white/black point control
 - **Hue/Saturation** — global saturation, hue rotation, lightness
 - **Vibrance** — skin-tone-aware saturation boost
 
-All edits are non-destructive and fully reversible. No pixels are touched. **No generative AI features are ever used** — no Generative Fill, no Neural Filters, no Content-Aware Fill — so your images remain eligible for photo competitions.
+All edits are non-destructive and fully reversible. No pixels are touched. The image preview sent to Claude is used only for analysis and is never stored or logged. **No generative AI features are ever used** — no Generative Fill, no Neural Filters, no Content-Aware Fill — so your images remain eligible for photo competitions.
 
 ## Requirements
 
@@ -44,7 +46,7 @@ Open a photo in Photoshop, select the layer you want to adjust, and type a comma
 - *"make this moody and cinematic"*
 - *"the sky is blown out — recover the highlights"*
 - *"make it black and white"*
-- *"boost the colours without oversaturating skin tones"*
+- *"boost the colors without oversaturating skin tones"*
 
 RawBuddy explains what it changed and logs every edit in the History tab for the session.
 

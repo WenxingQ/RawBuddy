@@ -28,7 +28,7 @@ export async function removeApiKey() {
  * @param {string} userCommand
  * @param {object|null} documentContext
  */
-export async function sendEditCommand(userCommand, documentContext) {
+export async function sendEditCommand(userCommand, documentContext, imageBase64 = null) {
   const apiKey = await getApiKey();
   if (!apiKey) {
     throw new Error('No API key configured. Please add your Anthropic API key in Settings.');
@@ -67,7 +67,15 @@ export async function sendEditCommand(userCommand, documentContext) {
         messages: [
           {
             role: 'user',
-            content: `${contextLine}\n\nEditing instruction: ${userCommand}`,
+            content: imageBase64
+              ? [
+                  {
+                    type: 'image',
+                    source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 },
+                  },
+                  { type: 'text', text: `${contextLine}\n\nEditing instruction: ${userCommand}` },
+                ]
+              : `${contextLine}\n\nEditing instruction: ${userCommand}`,
           },
         ],
       }),

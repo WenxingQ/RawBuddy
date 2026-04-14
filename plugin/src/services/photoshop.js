@@ -153,6 +153,65 @@ async function makeToneCurve(highlights, shadows, whites, blacks) {
   assertOk(r, 'ToneCurve');
 }
 
+/**
+ * Capture a downsampled JPEG of the active document for vision analysis.
+ * Returns a raw base64 string (no data-URL prefix), or null if the imaging
+ * API is unavailable or the capture fails for any reason.
+ */
+export async function captureDocumentImage() {
+  try {
+    const psModule = require('photoshop');
+    const { imaging } = psModule;
+    if (!imaging
+        || typeof imaging.getPixels !== 'function'
+        || typeof imaging.encodeImageData !== 'function') return null;
+
+    const doc = psModule.app.activeDocument;
+    if (!doc) return null;
+
+    // Downsample so the long edge is ≤ 1024px — keeps the JPEG well under Claude's 5MB limit
+    const docW = Math.round(Number(doc.width));
+    const docH = Math.round(Number(doc.height));
+    const scale = Math.max(docW, docH) > 1024 ? 1024 / Math.max(docW, docH) : 1.0;
+    const targetWidth  = Math.max(1, Math.round(docW * scale));
+    const targetHeight = Math.max(1, Math.round(docH * scale));
+
+    // buffer is assigned inside the modal callback and read outside it.
+    // withModal awaits the callback before returning, so buffer is fully populated
+    // by the time the await resolves — this is not a closure/race issue.
+    let buffer;
+    await withModal('RawBuddy: Capture Preview', async () => {
+      const result = await imaging.getPixels({
+        documentID: doc.id,
+        targetSize: { width: targetWidth, height: targetHeight },
+        colorSpace: 'RGB',
+        colorProfile: 'sRGB IEC61966-2.1',
+        components: 3,
+        componentSize: 8, // explicit 8-bit; default is undocumented and may change
+      });
+      buffer = await imaging.encodeImageData({
+        imageData: result.imageData,
+        mediaType: 'image/jpeg',
+        quality: 0.7, // sufficient for visual analysis; keeps payload ~80–150KB
+      });
+    });
+
+    if (!buffer) return null;
+
+    // Convert Uint8Array → base64 in 8192-byte chunks to avoid call-stack overflow
+    let binary = '';
+    const chunk = 8192;
+    for (let i = 0; i < buffer.length; i += chunk) {
+      binary += String.fromCharCode(...buffer.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+
+  } catch (err) {
+    console.warn('[RawBuddy] captureDocumentImage failed, continuing text-only:', err);
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -174,7 +233,9 @@ export async function applyEdits(edits) {
   await withModal('RawBuddy: Apply Adjustments', async () => {
     // Brightness/Contrast
     // camera_raw.exposure scaled to PS brightness (1 stop ≈ 40 units)
-    const brightness = adj.brightness  ?? (cr.exposure  !== undefined ? clamp(-150, cr.exposure * 40, 150) : undefined);
+    // adj.brightness passes through clamp to round and enforce range (-150 to +150)
+    const rawBrightness = adj.brightness !== undefined ? adj.brightness : (cr.exposure !== undefined ? cr.exposure * 40 : undefined);
+    const brightness = rawBrightness !== undefined ? clamp(-150, rawBrightness, 150) : undefined;
     // PS Brightness/Contrast contrast range is -50 to +100; camera_raw.contrast is -100 to +100
     const rawContrast = adj.contrast_ps ?? cr.contrast;
     const contrast = rawContrast !== undefined ? clamp(-50, rawContrast, 100) : undefined;
@@ -195,11 +256,15 @@ export async function applyEdits(edits) {
 
     // Hue/Saturation — photoshop section takes precedence; camera_raw.saturation is
     // a fallback. If both arrive in the same response, they are summed so neither is lost.
-    const hue        = adj.hue;
-    const saturation = (adj.saturation_ps !== undefined && cr.saturation !== undefined)
+    // All three values are clamped to their valid ranges before being sent to batchPlay.
+    const rawHue = adj.hue;
+    const rawSaturation = (adj.saturation_ps !== undefined && cr.saturation !== undefined)
       ? adj.saturation_ps + cr.saturation
       : (adj.saturation_ps ?? cr.saturation);
-    const lightness  = adj.lightness;
+    const rawLightness = adj.lightness;
+    const hue        = rawHue        !== undefined ? clamp(-180, rawHue,        180) : undefined;
+    const saturation = rawSaturation !== undefined ? clamp(-100, rawSaturation, 100) : undefined;
+    const lightness  = rawLightness  !== undefined ? clamp(-100, rawLightness,  100) : undefined;
     if (hue !== undefined || saturation !== undefined || lightness !== undefined) {
       await makeHueSaturation(hue ?? 0, saturation ?? 0, lightness ?? 0);
     }
