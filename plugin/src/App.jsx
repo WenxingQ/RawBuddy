@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CommandInput from './components/CommandInput';
 import EditHistory from './components/EditHistory';
 import Settings from './components/Settings';
 import ErrorBoundary from './components/ErrorBoundary';
+import { getApiKey } from './services/claude';
 
 const TABS = [
   { id: 'edit', label: 'Edit' },
@@ -13,9 +14,24 @@ const TABS = [
 export default function App() {
   const [activeTab, setActiveTab] = useState('edit');
   const [history, setHistory] = useState([]);
+  const [unseenCount, setUnseenCount] = useState(0);
+  const [hasApiKey, setHasApiKey] = useState(null); // null = loading, false = missing, true = present
+
+  useEffect(() => {
+    getApiKey().then((k) => setHasApiKey(!!k));
+  }, []);
 
   function handleEditApplied(entry) {
     setHistory((prev) => [...prev, entry]);
+    // activeTab is captured from closure — if tab changes mid-flight the count
+    // may be off by one, which is an acceptable approximation.
+    setUnseenCount((prev) => activeTab === 'history' ? prev : prev + 1);
+  }
+
+  function handleTabChange(tabId) {
+    if (tabId === 'history') setUnseenCount(0);
+    if (tabId === 'edit') getApiKey().then((k) => setHasApiKey(!!k));
+    setActiveTab(tabId);
   }
 
   return (
@@ -26,28 +42,12 @@ export default function App() {
         style={{
           padding: '8px 12px 6px',
           borderBottom: '1px solid #333',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
           flexShrink: 0,
         }}
       >
         <span style={{ fontSize: 13, fontWeight: 700, color: '#4aa0ff', letterSpacing: '-0.01em' }}>
           RawBuddy
         </span>
-        {history.length > 0 && (
-          <span
-            style={{
-              fontSize: 10,
-              color: '#666',
-              background: '#2a2a2a',
-              borderRadius: 8,
-              padding: '1px 6px',
-            }}
-          >
-            {history.length} edit{history.length !== 1 ? 's' : ''}
-          </span>
-        )}
       </div>
 
       {/* Tab Bar */}
@@ -56,18 +56,45 @@ export default function App() {
           <button
             key={tab.id}
             className={`tab-btn${activeTab === tab.id ? ' active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabChange(tab.id)}
           >
             {tab.label}
+            {tab.id === 'history' && unseenCount > 0 && (
+              <span style={{
+                display: 'inline-block',
+                marginLeft: 5,
+                background: '#4aa0ff',
+                borderRadius: 8,
+                padding: '0 4px',
+                fontSize: 9,
+                color: '#fff',
+                lineHeight: '14px',
+                verticalAlign: 'middle',
+                fontWeight: 700,
+              }}>
+                {unseenCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
       <div className="tab-content">
-        {activeTab === 'edit' && <CommandInput onEditApplied={handleEditApplied} />}
+        {activeTab === 'edit' && (
+          <CommandInput
+            onEditApplied={handleEditApplied}
+            hasApiKey={hasApiKey}
+            onGoToSettings={() => handleTabChange('settings')}
+          />
+        )}
         {activeTab === 'history' && <EditHistory history={history} />}
-        {activeTab === 'settings' && <Settings />}
+        {activeTab === 'settings' && (
+          <Settings
+            onKeySaved={() => setHasApiKey(true)}
+            onKeyCleared={() => setHasApiKey(false)}
+          />
+        )}
       </div>
     </div>
     </ErrorBoundary>

@@ -23,17 +23,16 @@ export default function EditHistory({ history }) {
           {item.explanation && (
             <div
               style={{
-                fontSize: 10,
-                color: '#aaa',
+                fontSize: 11,
+                color: '#bbb',
                 marginTop: 4,
-                lineHeight: 1.4,
-                fontStyle: 'italic',
+                lineHeight: 1.5,
               }}
             >
               {item.explanation}
             </div>
           )}
-          {item.editSummary.length > 0 && (
+          {item.editSummary?.length > 0 && (
             <div className="tags">
               {item.editSummary.map((tag) => (
                 <span key={tag} className="tag">

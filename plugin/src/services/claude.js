@@ -38,34 +38,48 @@ export async function sendEditCommand(userCommand, documentContext) {
     ? `Active document: "${documentContext.name}", ${documentContext.width}×${documentContext.height}px, ${documentContext.colorMode} mode.`
     : 'No document context available.';
 
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'prompt-caching-2024-07-31',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 1024,
-      system: [
-        {
-          type: 'text',
-          text: SYSTEM_PROMPT,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      tools: [APPLY_EDITS_TOOL],
-      tool_choice: { type: 'tool', name: 'apply_photo_edits' },
-      messages: [
-        {
-          role: 'user',
-          content: `${contextLine}\n\nEditing instruction: ${userCommand}`,
-        },
-      ],
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30_000);
+
+  let response;
+  try {
+    response = await fetch(API_URL, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'prompt-caching-2024-07-31',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 1024,
+        system: [
+          {
+            type: 'text',
+            text: SYSTEM_PROMPT,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
+        tools: [APPLY_EDITS_TOOL],
+        tool_choice: { type: 'tool', name: 'apply_photo_edits' },
+        messages: [
+          {
+            role: 'user',
+            content: `${contextLine}\n\nEditing instruction: ${userCommand}`,
+          },
+        ],
+      }),
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    if (err.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection and try again.');
+    }
+    throw err;
+  }
+  clearTimeout(timer);
 
   if (!response.ok) {
     const errorBody = await response.text();

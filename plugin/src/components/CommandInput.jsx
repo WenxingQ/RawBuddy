@@ -27,7 +27,7 @@ function buildEditSummary(edits) {
   return tags;
 }
 
-export default function CommandInput({ onEditApplied }) {
+export default function CommandInput({ onEditApplied, hasApiKey, onGoToSettings }) {
   const [command, setCommand] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -41,18 +41,11 @@ export default function CommandInput({ onEditApplied }) {
     setError(null);
     setLastExplanation(null);
 
-    let step = 'init';
     try {
-      step = 'getDocumentContext';
       const docContext = getDocumentContext();
-
-      step = 'sendEditCommand';
       const edits = await sendEditCommand(trimmed, docContext);
-
-      step = 'applyEdits';
       await applyEdits(edits);
 
-      step = 'done';
       setLastExplanation(edits.explanation);
       setCommand('');
 
@@ -66,17 +59,9 @@ export default function CommandInput({ onEditApplied }) {
         });
       }
     } catch (err) {
-      const raw =
-        (err && typeof err === 'object')
-          ? (() => {
-              const keys = Object.getOwnPropertyNames(err);
-              const parts = keys.map((k) => {
-                try { return k + ': ' + String(err[k]); } catch { return k + ': ?'; }
-              });
-              return parts.length ? parts.join(' | ') : String(err);
-            })()
-          : String(err);
-      setError('[step:' + step + '] ' + raw);
+      const msg = (err && err.message) ? err.message : 'An unexpected error occurred.';
+      setError(msg);
+      console.error('[RawBuddy] handleSubmit error:', err);
     } finally {
       setLoading(false);
     }
@@ -92,6 +77,37 @@ export default function CommandInput({ onEditApplied }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+      {/* API key setup prompt — shown only when key is confirmed missing */}
+      {hasApiKey === false && (
+        <div style={{
+          background: 'rgba(74, 160, 255, 0.08)',
+          border: '1px solid rgba(74, 160, 255, 0.4)',
+          borderRadius: 4,
+          padding: '8px 10px',
+          fontSize: 11,
+          color: '#ddd',
+          lineHeight: 1.5,
+        }}>
+          To get started, add your Anthropic API key in{' '}
+          <button
+            onClick={onGoToSettings}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#4aa0ff',
+              cursor: 'pointer',
+              fontSize: 11,
+              padding: 0,
+              textDecoration: 'underline',
+            }}
+          >
+            Settings
+          </button>
+          .
+        </div>
+      )}
+
       <div>
         <div className="section-title" style={{ marginBottom: 6 }}>
           What would you like to adjust?
@@ -102,12 +118,12 @@ export default function CommandInput({ onEditApplied }) {
           onChange={(e) => {
             setCommand(e.target.value);
             setError(null);
+            setLastExplanation(null);
           }}
           onKeyDown={handleKeyDown}
           placeholder={
-            'e.g. "The sky is blown out — recover highlights and add warmth"\n' +
-            'or "Make this look moody and cinematic"\n\n' +
-            'Press Ctrl+Enter to apply.'
+            'e.g. "Recover blown-out sky and add warmth"\n' +
+            '"Make the shadows warmer and lift the blacks"'
           }
           disabled={loading}
         />
@@ -133,10 +149,8 @@ export default function CommandInput({ onEditApplied }) {
         </div>
       )}
 
-      <div
-        style={{ fontSize: 10, color: '#666', textAlign: 'right', marginTop: -4 }}
-      >
-        Ctrl+Enter to apply
+      <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right' }}>
+        {navigator.platform?.startsWith('Mac') ? '⌘' : 'Ctrl'}+Enter to apply
       </div>
     </div>
   );

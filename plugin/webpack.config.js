@@ -37,8 +37,10 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './src/index.html',
       filename: 'index.html',
-      inject: 'body',         // place script at end of <body>, after #root
-      scriptLoading: 'blocking', // no defer — UXP ignores defer and runs scripts immediately
+      inject: 'body',
+      // UXP runs scripts before body is parsed regardless of placement or defer.
+      // index.jsx handles this with a DOMContentLoaded fallback.
+      scriptLoading: 'blocking',
     }),
   ],
 };

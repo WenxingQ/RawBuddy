@@ -7,7 +7,7 @@ function bp() { return require('photoshop').action.batchPlay; }
  * otherwise call fn directly.
  */
 async function withModal(commandName, fn) {
-  const core = require('photoshop').core;
+  const core = ps().core;
   if (core && typeof core.executeAsModal === 'function') {
     return core.executeAsModal(fn, { commandName });
   }
@@ -31,10 +31,10 @@ export function getDocumentContext() {
   let height = 0;
   let colorMode = 'unknown';
 
-  try { name = String(doc.title || doc.name || 'photo'); } catch {}
-  try { width = Math.round(Number(doc.width)); } catch {}
-  try { height = Math.round(Number(doc.height)); } catch {}
-  try { colorMode = String(doc.mode); } catch {}
+  try { name = String(doc.title || doc.name || 'photo'); } catch (e) { console.warn('[RawBuddy] doc.name', e); }
+  try { width = Math.round(Number(doc.width)); } catch (e) { console.warn('[RawBuddy] doc.width', e); }
+  try { height = Math.round(Number(doc.height)); } catch (e) { console.warn('[RawBuddy] doc.height', e); }
+  try { colorMode = String(doc.mode); } catch (e) { console.warn('[RawBuddy] doc.mode', e); }
 
   return { name, width, height, colorMode };
 }
@@ -93,7 +93,7 @@ async function makeHueSaturation(hue, saturation, lightness) {
   assertOk(r, 'HueSaturation');
 }
 
-async function makeVibrance(vibrance, saturation) {
+async function makeVibrance(vibrance) {
   const r = await bp()([{
     _obj: 'make',
     _target: [{ _ref: 'adjustmentLayer' }],
@@ -102,7 +102,6 @@ async function makeVibrance(vibrance, saturation) {
       type: {
         _obj: 'vibrance',
         vibrance: Number(vibrance),
-        saturation: Number(saturation),
       },
     },
   }], { synchronousExecution: false });
@@ -113,17 +112,22 @@ async function makeVibrance(vibrance, saturation) {
  * Curves adjustment layer for highlights/shadows/whites/blacks.
  * Maps Camera Raw-style -100/+100 values to curve output levels (0-255).
  * Points are clamped to stay non-decreasing so the curve is always valid.
+ *
+ * blacks positive  → lifts black point (output > 0)
+ * blacks negative  → deepens shadows via the shadow point (can't go below 0 on output)
+ * whites negative  → pulls down the white point for highlight recovery (computed independently
+ *                    of hiV, then enforced >= hiV to keep curve non-decreasing)
  */
 async function makeToneCurve(highlights, shadows, whites, blacks) {
-  // blacks: negative = deepen (allow below 0 isn't possible on output, so shift nearby shadow)
-  //         positive = lift blacks (raise output black point)
-  const blackV  = clamp(0,        (blacks     ?? 0) * 0.30,       45);
-  const shadowV = clamp(blackV,   64 + (shadows    ?? 0) * 0.55, 200);
-  const hiV     = clamp(shadowV, 192 + (highlights ?? 0) * 0.50,  255);
-  // whites: adjust the horizontal 255 output — negative recovers highlights (pulls down),
-  //         positive expands them. Upper bound left open so positive whites can lift above 255
-  //         is impossible, but we allow the input to reach 255 from below via hiV clamping.
-  const whiteV  = clamp(hiV,     255 + (whites     ?? 0) * 0.25,  255);
+  const blacksVal = blacks ?? 0;
+  const blackV  = clamp(0, blacksVal > 0 ? blacksVal * 0.30 : 0, 45);
+  // Negative blacks pull the shadow point down to deepen shadows
+  const shadowV = clamp(blackV, 64 + (shadows ?? 0) * 0.55 + (blacksVal < 0 ? blacksVal * 0.25 : 0), 200);
+  const hiV     = clamp(shadowV, 192 + (highlights ?? 0) * 0.50, 255);
+  // Compute whiteV independently so negative whites can recover below hiV,
+  // then enforce non-decreasing invariant with Math.max.
+  const whiteRaw = clamp(0, 255 + (whites ?? 0) * 0.25, 255);
+  const whiteV   = Math.max(hiV, whiteRaw);
 
   const r = await bp()([{
     _obj: 'make',
@@ -186,12 +190,15 @@ export async function applyEdits(edits) {
 
     // Vibrance layer — cr.vibrance only (cr.saturation routes to Hue/Sat below)
     if (cr.vibrance !== undefined) {
-      await makeVibrance(cr.vibrance, 0);
+      await makeVibrance(cr.vibrance);
     }
 
-    // Hue/Saturation — photoshop section + camera_raw.saturation both land here
+    // Hue/Saturation — photoshop section takes precedence; camera_raw.saturation is
+    // a fallback. If both arrive in the same response, they are summed so neither is lost.
     const hue        = adj.hue;
-    const saturation = adj.saturation_ps ?? cr.saturation;
+    const saturation = (adj.saturation_ps !== undefined && cr.saturation !== undefined)
+      ? adj.saturation_ps + cr.saturation
+      : (adj.saturation_ps ?? cr.saturation);
     const lightness  = adj.lightness;
     if (hue !== undefined || saturation !== undefined || lightness !== undefined) {
       await makeHueSaturation(hue ?? 0, saturation ?? 0, lightness ?? 0);

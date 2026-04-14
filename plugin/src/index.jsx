@@ -11,10 +11,10 @@ function mount() {
     document.body.appendChild(container);
     ReactDOM.render(<App />, container);
   } catch (err) {
-    document.body.innerHTML =
-      '<div style="color:#f06060;padding:12px;font-family:sans-serif;font-size:11px">' +
-      '<b>RawBuddy failed to load:</b><br/>' + (err && err.message) +
-      '</div>';
+    const el = document.createElement('div');
+    el.style.cssText = 'color:#f06060;padding:12px;font-family:sans-serif;font-size:11px';
+    el.textContent = 'RawBuddy failed to load: ' + (err && err.message);
+    document.body.appendChild(el);
   }
 }
 

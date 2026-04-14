@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getApiKey, saveApiKey, removeApiKey } from '../services/claude';
 
-export default function Settings() {
+export default function Settings({ onKeySaved, onKeyCleared }) {
   const [keyInput, setKeyInput] = useState('');
   const [hasSavedKey, setHasSavedKey] = useState(false);
   const [status, setStatus] = useState(null); // 'saved' | 'cleared' | 'error'
@@ -35,6 +35,7 @@ export default function Settings() {
       setKeyInput('');
       setStatus('saved');
       setErrorMsg('');
+      if (onKeySaved) onKeySaved();
     } catch (e) {
       setErrorMsg('Failed to save key: ' + e.message);
       setStatus('error');
@@ -51,6 +52,7 @@ export default function Settings() {
     setKeyInput('');
     setStatus('cleared');
     setErrorMsg('');
+    if (onKeyCleared) onKeyCleared();
   }
 
   return (
@@ -106,8 +108,8 @@ export default function Settings() {
           </div>
         )}
         {status === 'cleared' && (
-          <div className="status-saved" style={{ marginTop: 8, color: '#999' }}>
-            API key cleared.
+          <div className="status-neutral" style={{ marginTop: 8 }}>
+            API key removed.
           </div>
         )}
 
