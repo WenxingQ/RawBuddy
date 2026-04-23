@@ -44,9 +44,10 @@ plugin/
 └── src/
     ├── index.html         HTML template (CSS inlined here — style-loader crashes in UXP)
     ├── index.jsx          React 17 mount point
-    ├── App.jsx            Root: tab bar (Edit / History / Settings) + session history state
+    ├── App.jsx            Root: tab bar (Critique / Edit / History) + gear-icon Settings + session history state
     ├── components/
     │   ├── CommandInput.jsx   NL textarea → Claude → Photoshop → history update
+    │   ├── Critique.jsx       PSA-criteria photo critique — drill-down list/detail UI
     │   ├── EditHistory.jsx    Session-scoped edit log
     │   ├── Settings.jsx       API key input (stored in window.localStorage)
     │   └── ErrorBoundary.jsx  Catches render errors and shows them instead of blank panel
@@ -109,6 +110,17 @@ plugin/
 - **`encodeImageData` with `mediaType: 'image/jpeg'`** accepts a `quality` float (0–1). We use `0.7` — sufficient for visual analysis, keeps payload to ~80–150KB base64.
 - **Do not call `imageData.dispose()`** after passing it to `encodeImageData`. The UXP imaging runtime manages the lifecycle automatically; explicit disposal can cause access-after-free errors.
 - **Base64 conversion must be chunked** (8192 bytes per iteration). Calling `String.fromCharCode(...buffer)` on a large Uint8Array in a single spread will exhaust the JS call stack.
+
+### UXP UI layout lessons — do not revert these
+
+- **`<button>` UA stylesheet inflates height and overrides flex direction.** UXP's native button element has a UA stylesheet that adds implicit padding and forces block-level layout. Inline `flexDirection: 'column'` on a `<button>` is silently ignored. For any compact or custom-layout interactive row, use `<div role="button" tabIndex={0}>` instead — a `<div>` has no UA styles so inline flex layout is fully respected.
+- **`overflow: auto/scroll` does not work in UXP.** The layout engine (Yoga) treats `overflow: auto` and `overflow: scroll` as `overflow: hidden`. There is no native scrolling in UXP panels. Design UIs to fit entirely within the fixed panel height. If content exceeds the panel, it is silently clipped.
+- **Use drill-down navigation instead of scroll.** Since scroll is unavailable, the pattern for showing more content than fits on screen is: list view (compact rows) → full-panel detail view (tapping a row replaces the panel content, with a ← Back button to return). This is implemented in `Critique.jsx`.
+- **CSS class properties can conflict with inline styles on UXP elements.** When a CSS class sets `display: flex; align-items: center` (row direction), an inline `flexDirection: 'column'` on the same element may not override it in UXP. Prefer fully inline styles on interactive elements, or use `<div>` instead of `<button>` to avoid UA stylesheet interference.
+- **CSS `@keyframes` animations may not render in UXP.** The CSS `animation` property with `@keyframes` (e.g., a spinning border loader) may appear static. Use JS-driven state updates via `setInterval` in a React component to animate UI elements reliably. See `AnimatedDots` in `Critique.jsx` for the pattern.
+- **Fixed-width containers prevent layout shift during text animation.** When animating text that changes width (e.g., trailing dots cycling `. / .. / ...`), wrap the animated portion in a `<span style={{ display: 'inline-block', width: Npx }}>`. Without a fixed width, the surrounding layout shifts on every frame.
+- **Panel height is a hard budget.** The preferred docked size is 360×640px. With the header (~32px), tab bar (~30px), and tab content padding (28px), usable content height is ~550px. Each criterion row targets 30px; a 5-row critique list plus score card fits comfortably. Always verify that new UI additions don't push content below the clipping point — UXP gives no scroll fallback.
+- **Feedback and its context belong together.** For the Critique feature: placing "What to Improve" in a separate consolidated view (reached via a pill button) required the user to navigate away from the scoring reason to find the fix. Moving improvements back into each criterion's detail view — always visible, no toggle — eliminated the extra navigation step. Keep causally linked information (score reason + fix) on the same screen.
 
 ### Adding new adjustment parameters
 
