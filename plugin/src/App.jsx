@@ -62,7 +62,6 @@ export default function App() {
               onClick={openSettings}
               style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: 11, padding: '2px 4px', display: 'flex', alignItems: 'center', gap: 3 }}
             >
-              <span style={{ fontSize: 12 }}>⚙</span>
               <span>Settings</span>
             </button>
           </>
