@@ -3,7 +3,7 @@ import React from 'react';
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { error: null };
+    this.state = { error: null, resetKey: 0 };
     this.handleReset = this.handleReset.bind(this);
   }
 
@@ -16,7 +16,7 @@ export default class ErrorBoundary extends React.Component {
   }
 
   handleReset() {
-    this.setState({ error: null });
+    this.setState((s) => ({ error: null, resetKey: s.resetKey + 1 }));
   }
 
   render() {
@@ -67,6 +67,10 @@ export default class ErrorBoundary extends React.Component {
         </div>
       );
     }
-    return this.props.children;
+    return (
+      <React.Fragment key={this.state.resetKey}>
+        {this.props.children}
+      </React.Fragment>
+    );
   }
 }

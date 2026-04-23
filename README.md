@@ -4,14 +4,22 @@ A Photoshop UXP panel plugin that lets you edit photos using plain English. Type
 
 ## What it does
 
-RawBuddy sends your instruction to Claude (Anthropic's AI) along with a downsampled preview of your image. Claude visually analyses the photo — assessing exposure, tones, color casts, and mood — then uses that as baseline context when deciding what values to apply. The result is adjustments calibrated to what your image actually looks like, not a generic preset.
+RawBuddy has two modes, accessible from the tab bar:
 
-Those values are applied directly to your document as native Photoshop adjustment layers:
+### Critique
+Scores your photo against five PSA (Photographic Society of America) judging criteria: Technical Quality, Composition, Subject & Storytelling, Impact & Appeal, and Color & Tone. Each criterion gets a numeric score (1–10) with a colour-coded bar. Tap any criterion to see the scoring reason and specific editing suggestions for that area.
+
+### Edit
+Type a plain-English command and RawBuddy translates it into precise, non-destructive Photoshop adjustment layers. It sends your instruction to Claude along with a downsampled preview of your image. Claude visually analyses the photo — assessing exposure, tones, color casts, and mood — then uses that as baseline context when deciding what values to apply. The result is adjustments calibrated to what your image actually looks like, not a generic preset.
+
+Edits are applied as native Photoshop adjustment layers:
 
 - **Brightness/Contrast** — exposure and contrast adjustments
 - **Curves** — highlight recovery, shadow lifting, white/black point control
 - **Hue/Saturation** — global saturation, hue rotation, lightness
 - **Vibrance** — skin-tone-aware saturation boost
+
+---
 
 All edits are non-destructive and fully reversible. No pixels are touched. The image preview sent to Claude is used only for analysis and is never stored or logged. **No generative AI features are ever used** — no Generative Fill, no Neural Filters, no Content-Aware Fill — so your images remain eligible for photo competitions.
 
@@ -39,7 +47,9 @@ After any code change: `npm run build`, then click **Reload** in UXP Developer T
 
 ## Usage
 
-Open a photo in Photoshop, select the layer you want to adjust, and type a command in the panel:
+**Critique tab** — click **Critique Photo** with any photo open. RawBuddy scores it across five PSA criteria and shows colour-coded scores. Tap a criterion to read the scoring reason and targeted improvement suggestions.
+
+**Edit tab** — open a photo, select a layer, and type a command:
 
 - *"increase exposure by half a stop"*
 - *"the shadows are too dark, open them up"*

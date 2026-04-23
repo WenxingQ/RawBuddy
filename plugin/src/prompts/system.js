@@ -56,6 +56,81 @@ User: "The image looks flat, add some punch"
 User: "Increase exposure"
 → camera_raw: { exposure: 0.5 }`;
 
+export const CRITIQUE_SYSTEM_PROMPT = `You are RawBuddy Critique, an expert photo judge with deep knowledge of PSA (Photographic Society of America) competition standards and accepted photographic best practices. Your role is to evaluate photos submitted for competition and provide honest, constructive, actionable feedback.
+
+## Judging Criteria
+
+Score each criterion from 1 to 10 (one decimal allowed). Use the full range — a score of 10 is exceptional and rare; 5 is average; below 4 indicates a significant weakness.
+
+1. **Technical Quality** (sharpness, focus accuracy, exposure correctness, noise/grain, chromatic aberration, motion blur — intentional vs. unintentional)
+2. **Composition** (balance, rule of thirds, framing, leading lines, use of negative space, subject placement, horizon level, visual flow)
+3. **Subject & Storytelling** (strength and clarity of subject, whether a decisive moment was captured, expression/pose for portraits, narrative or context, subject isolation)
+4. **Impact & Appeal** (emotional resonance, immediate wow factor, memorability, whether the image would stand out in a competitive field)
+5. **Color & Tone** (tonal range and separation, color harmony, white balance accuracy, appropriate saturation, mood conveyed through tone)
+
+## Overall Score
+
+Set overall_score to the unweighted mean of the five criterion scores, rounded to one decimal.
+
+## Per-Criterion Feedback
+
+For each criterion provide:
+- **reason**: 1–2 sentences identifying the specific observed weakness or strength that drove this score.
+- **improvements**: 1–2 concrete editing steps (camera raw and native PS adjustments only). Be specific with values — e.g. "Pull highlights to −50" not "fix highlights".
+
+## Rules
+
+1. ALWAYS call the critique_photo tool — never respond with plain text alone.
+2. NEVER suggest generative AI features in improvement steps: no Generative Fill, no Neural Filters, no Content-Aware Fill, no Sky Replacement. These make images ineligible for photo competitions.
+3. Improvement steps must be specific and numeric — e.g. "Pull highlights to −50", not "fix the highlights".
+
+## Style
+
+- Be direct. Do not inflate scores.
+- Keep overall_summary to 1–2 sentences: one strength, one area to improve.`;
+
+export const CRITIQUE_TOOL = {
+  name: 'critique_photo',
+  description:
+    'Critique the photo against PSA competition judging standards. Score each criterion and provide per-criterion reasons and improvement suggestions.',
+  input_schema: {
+    type: 'object',
+    required: ['overall_score', 'overall_summary', 'criteria'],
+    properties: {
+      overall_score: {
+        type: 'number',
+        description: 'Overall score out of 10 (unweighted mean of criteria scores, one decimal)',
+      },
+      overall_summary: {
+        type: 'string',
+        description: '1-2 sentences: one main strength, one top area to improve',
+      },
+      criteria: {
+        type: 'array',
+        description: 'Scores and feedback for each of the 5 PSA judging criteria',
+        items: {
+          type: 'object',
+          required: ['name', 'score', 'reason', 'improvements'],
+          properties: {
+            name: { type: 'string', description: 'Criterion name' },
+            score: { type: 'number', description: 'Score out of 10 (one decimal allowed)' },
+            reason: { type: 'string', description: '1–2 sentences identifying the specific observations that drove this score' },
+            improvements: {
+              type: 'array',
+              description: '1-2 concrete editing steps with specific values',
+              items: { type: 'string' },
+              minItems: 1,
+              maxItems: 2,
+            },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    additionalProperties: false,
+  },
+};
+
 export const APPLY_EDITS_TOOL = {
   name: 'apply_photo_edits',
   description:

@@ -11,12 +11,14 @@
   --bg-raised: #2a2a2a;
   --bg-hover: #333;
   --border: #444;
-  --text: #ddd;
+  --text: #e0e0e0;
   --text-muted: #999;
+  --text-subtle: #b8b8b8;
   --accent: #4aa0ff;
   --accent-hover: #5ba8ff;
   --error: #f06060;
   --success: #5cba6a;
+  --score-mid: #f5a623;
   --radius: 4px;
   --font: 'Adobe Clean', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -39,16 +41,18 @@ html, body {
 }
 .tab-btn {
   flex: 1;
-  padding: 8px 4px;
+  padding: 7px 2px;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 10px;
   font-family: var(--font);
   cursor: pointer;
-  letter-spacing: 0.03em;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .tab-btn:hover { color: var(--text); }
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
@@ -56,11 +60,9 @@ html, body {
 /* ── Tab Content ──────────────────────────────────────── */
 .tab-content {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: hidden;
   padding: 14px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 /* ── Command Input ────────────────────────────────────── */
@@ -124,19 +126,6 @@ html, body {
   font-size: 11px;
   line-height: 1.4;
 }
-.spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  vertical-align: middle;
-  margin-right: 6px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
 /* ── Edit History ─────────────────────────────────────── */
 .history-empty {
   color: var(--text-muted);
@@ -187,6 +176,7 @@ html, body {
   letter-spacing: 0.05em;
   margin-bottom: 2px;
 }
+
   </style>
 </head>
 <body>

@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { sendEditCommand } from '../services/claude';
 import { getDocumentContext, applyEdits, captureDocumentImage } from '../services/photoshop';
+import AnimatedDots from './AnimatedDots';
+
+function isMac() {
+  try { return require('uxp').host.os === 'macOS'; } catch { return false; }
+}
+const MODIFIER_KEY = isMac() ? '⌘' : 'Ctrl';
 
 /**
  * Build a short list of tag strings from Claude's edit response,
@@ -118,7 +124,6 @@ export default function CommandInput({ onEditApplied, hasApiKey, onGoToSettings 
           value={command}
           onChange={(e) => {
             setCommand(e.target.value);
-            setError(null);
             setLastExplanation(null);
           }}
           onKeyDown={handleKeyDown}
@@ -131,14 +136,7 @@ export default function CommandInput({ onEditApplied, hasApiKey, onGoToSettings 
       </div>
 
       <button className="btn-primary" onClick={handleSubmit} disabled={loading || !command.trim()}>
-        {loading ? (
-          <>
-            <span className="spinner" />
-            Applying...
-          </>
-        ) : (
-          'Apply Edit'
-        )}
+        {loading ? <>Applying<AnimatedDots /></> : 'Apply Edit'}
       </button>
 
       {error && <div className="status-error">{error}</div>}
@@ -151,7 +149,7 @@ export default function CommandInput({ onEditApplied, hasApiKey, onGoToSettings 
       )}
 
       <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right' }}>
-        {(() => { try { return require('uxp').host.os === 'macOS'; } catch { return false; } })() ? '⌘' : 'Ctrl'}+Enter to apply
+        {MODIFIER_KEY}+Enter to apply
       </div>
     </div>
   );

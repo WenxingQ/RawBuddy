@@ -8,16 +8,10 @@ export default function Settings({ onKeySaved, onKeyCleared }) {
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    getApiKey().then((k) => {
-      if (k) {
-        setHasSavedKey(true);
-        // Show masked placeholder — don't show the real key
-        setKeyInput('');
-      }
-    });
+    if (getApiKey()) setHasSavedKey(true);
   }, []);
 
-  async function handleSave() {
+  function handleSave() {
     const trimmed = keyInput.trim();
     if (!trimmed) {
       setErrorMsg('Please enter an API key.');
@@ -30,7 +24,7 @@ export default function Settings({ onKeySaved, onKeyCleared }) {
       return;
     }
     try {
-      await saveApiKey(trimmed);
+      saveApiKey(trimmed);
       setHasSavedKey(true);
       setKeyInput('');
       setStatus('saved');
@@ -42,9 +36,9 @@ export default function Settings({ onKeySaved, onKeyCleared }) {
     }
   }
 
-  async function handleClear() {
+  function handleClear() {
     try {
-      await removeApiKey();
+      removeApiKey();
     } catch {
       // localStorage.removeItem does not throw in UXP but guard defensively
     }
@@ -76,10 +70,11 @@ export default function Settings({ onKeySaved, onKeyCleared }) {
           </div>
         )}
 
-        <label className="settings-label">
+        <label className="settings-label" htmlFor="api-key-input">
           {hasSavedKey ? 'Replace API key' : 'Enter API key'}
         </label>
         <input
+          id="api-key-input"
           className="settings-input"
           type="password"
           value={keyInput}
@@ -91,10 +86,10 @@ export default function Settings({ onKeySaved, onKeyCleared }) {
           placeholder="sk-ant-api03-..."
           autoComplete="off"
           spellCheck={false}
+          aria-describedby="api-key-hint"
         />
-        <div className="settings-hint" style={{ marginTop: 4 }}>
-          Your key is stored in the plugin's local storage and is never sent anywhere except
-          directly to api.anthropic.com.
+        <div id="api-key-hint" className="settings-hint" style={{ marginTop: 4 }}>
+          Stored locally — sent only to api.anthropic.com.
         </div>
 
         {status === 'error' && (
@@ -115,7 +110,7 @@ export default function Settings({ onKeySaved, onKeyCleared }) {
 
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
           <button className="btn-primary" onClick={handleSave}>
-            Save Key
+            {hasSavedKey ? 'Update Key' : 'Save Key'}
           </button>
           {hasSavedKey && (
             <button
@@ -139,7 +134,22 @@ export default function Settings({ onKeySaved, onKeyCleared }) {
           are ever applied.
         </p>
         <p className="settings-hint" style={{ marginTop: 6, lineHeight: 1.6 }}>
-          Get an API key at console.anthropic.com
+          Get an API key at{' '}
+          <span
+            role="link"
+            tabIndex={0}
+            onClick={() => {
+              try { require('uxp').shell.openExternal('https://console.anthropic.com'); } catch {}
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                try { require('uxp').shell.openExternal('https://console.anthropic.com'); } catch {}
+              }
+            }}
+            style={{ color: '#4aa0ff', cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            console.anthropic.com
+          </span>
         </p>
       </div>
     </div>
