@@ -49,14 +49,14 @@ After any code change: `npm run build`, then click **Reload** in UXP Developer T
 
 **Critique tab** — click **Critique Photo** with any photo open. RawBuddy scores it across five PSA criteria and shows colour-coded scores. Tap a criterion to read the scoring reason and targeted improvement suggestions.
 
-**Edit tab** — open a photo, select a layer, and type a command:
+**Edit tab** — open a photo, select a layer, and type a command. Because RawBuddy sees the actual image, it calibrates values to what's already there rather than applying a generic preset:
 
-- *"increase exposure by half a stop"*
-- *"the shadows are too dark, open them up"*
-- *"make this moody and cinematic"*
-- *"the sky is blown out — recover the highlights"*
-- *"make it black and white"*
-- *"boost the colors without oversaturating skin tones"*
+- *"The highlights on the water are completely blown — pull them back without flattening the contrast"*
+- *"This portrait feels flat and a bit cool, warm up the skin tones and add some depth"*
+- *"The subject is well-exposed but the background is distracting — pull it back"*
+- *"Shot in harsh midday sun — make it feel like late afternoon golden hour"*
+- *"The shadows are crushed and the colors feel muddy, give it some punch"*
+- *"This forest shot is green-heavy, desaturate the greens slightly and boost the warmth"*
 
 RawBuddy explains what it changed and logs every edit in the History tab for the session.
 

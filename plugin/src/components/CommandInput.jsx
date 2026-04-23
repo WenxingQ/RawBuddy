@@ -3,11 +3,6 @@ import { sendEditCommand } from '../services/claude';
 import { getDocumentContext, applyEdits, captureDocumentImage } from '../services/photoshop';
 import AnimatedDots from './AnimatedDots';
 
-function isMac() {
-  try { return require('uxp').host.os === 'macOS'; } catch { return false; }
-}
-const MODIFIER_KEY = isMac() ? '⌘' : 'Ctrl';
-
 /**
  * Build a short list of tag strings from Claude's edit response,
  * e.g. ["exposure +0.5", "highlights -30", "hue/sat layer"]
@@ -116,7 +111,7 @@ export default function CommandInput({ onEditApplied, hasApiKey, onGoToSettings 
       )}
 
       <div>
-        <div className="section-title" style={{ marginBottom: 6 }}>
+        <div style={{ fontSize: 12, color: '#e0e0e0', lineHeight: 1.5, marginBottom: 6 }}>
           What would you like to adjust?
         </div>
         <textarea
@@ -142,15 +137,22 @@ export default function CommandInput({ onEditApplied, hasApiKey, onGoToSettings 
       {error && <div className="status-error">{error}</div>}
 
       {lastExplanation && !error && (
-        <div className="explanation-box">
-          <div className="label">Claude applied</div>
-          {lastExplanation}
+        <div style={{
+          background: 'var(--bg-raised)',
+          borderLeft: '3px solid var(--accent)',
+          borderRadius: 'var(--radius)',
+          padding: '8px 10px',
+          lineHeight: 1.5,
+        }}>
+          <div style={{ fontSize: 10, color: '#e0e0e0', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+            Claude applied
+          </div>
+          <div style={{ fontSize: 11, color: '#e0e0e0', lineHeight: 1.5 }}>
+            {lastExplanation}
+          </div>
         </div>
       )}
 
-      <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right' }}>
-        {MODIFIER_KEY}+Enter to apply
-      </div>
     </div>
   );
 }
