@@ -49,6 +49,9 @@ After any code change: `npm run build`, then click **Reload** in UXP Developer T
 
 **Critique tab** — click **Critique Photo** with any photo open. RawBuddy scores it across five PSA criteria and shows colour-coded scores. Tap a criterion to read the scoring reason and targeted improvement suggestions.
 
+![Critique example 1](examples/image1.png)
+![Critique example 2](examples/image2.png)
+
 **Edit tab** — open a photo, select a layer, and type a command. Because RawBuddy sees the actual image, it calibrates values to what's already there rather than applying a generic preset:
 
 - *"The highlights on the water are completely blown — pull them back without flattening the contrast"*
